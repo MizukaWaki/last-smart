@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="styl.css" rel="stylesheet" />
+    <title>鳥</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.1.9/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+    <script src="https://obniz.com/js/jquery-3.2.1.min.js"></script>
+    <script src="https://unpkg.com/obniz/obniz.js"></script>
+  </head>
+
+  <body>
+    <h2>スマートフォンの傾きを使い障害物をよけて進もう!!</h2>
+    <h3>※QRコードからスマホの傾きを取得してください。<h3>
+        <img class="url" src="img/url.png" width="200px">
+    <div>
+      <div>あなたのID: <span id="myid"></span></div>
+      <div>
+        ルームID: <input id="room" type="text" size="10" value="room001" />
+      </div>
+      <button id="connect" class="button">スタート</button>
+    </div>
+    <script>
+      const obniz = new Obniz("0808-0143");
+      const LED_length = 15;
+      let leds;
+      let socket = io.connect();
+      let myid;
+      let room = document.querySelector("#room").value;
+      let btn = document.querySelector("#connect");
+
+      let g = 0;
+      let b = 0;
+      let cat;
+      let x = 0;
+      let y = 325;
+      let targetX;
+      let targetY;
+      let blockw = 70;
+      let blockh = 300;
+      let random1, random2, random3, random4, random5;
+      let texts;
+      let timer = 30;
+
+      // 発話機能をインスタンス化
+      let msg = new SpeechSynthesisUtterance();
+      let voices = window.speechSynthesis.getVoices();
+
+      function speak(texts) {
+        // 以下オプション設定
+        msg.volume = 1.0; // 音量 min 0 ~ max 1
+        msg.rate = 2; // 速度 min 0.5 ~ max 3.5
+        msg.pitch = 1; // 音程 min 0 ~ max 2
+
+        msg.text = texts; // 喋る内容
+        msg.lang = "ja-JP"; // en-US or ja-JP
+        // msg.lang = 'en-US'; // en-US or ja-JP
+
+        // 発話実行
+        speechSynthesis.speak(msg);
+      }
+
+      // 終了時の処理
+      msg.onend = function (event) {
+        console.log("End: ", texts);
+      };
+
+      //obniz
+      obniz.onconnect = async function () {
+        leds = obniz.wired("WS2812", { din: 26 });
+      };
+      //ルームに入る
+      btn.addEventListener("click", function () {
+        socket.emit("join", room);
+        btn.remove();
+        texts = "スタート";
+        speak(texts);
+        //count();
+      });
+
+      socket.on("mylogin", function (data) {
+        myid = data;
+        document.querySelector("#myid").innerHTML = myid;
+        console.log("あなたのID: ", myid);
+      });
+
+      socket.on("sensor", function (data) {
+        //console.log(g);
+        g = data.g;
+        b = data.b;
+      });
+
+      function preload() {
+        cat = loadImage("img/tori.png");
+        let sora = loadImage("img/sora.jpeg");
+      }
+
+      function setup() {
+        createCanvas(800, 600);
+        background(200);
+        //rectMode(CENTER);
+        //randomY = random(width);
+        random1 = random(-70, 0);
+        random2 = random(-70, 0);
+        random3 = random(-70, 0);
+        random4 = random(-70, 0);
+        random5 = random(-70, 0);
+      }
+
+      function draw() {
+        background(173, 216, 230);
+        //image(sora, 0, 0, 800, 600);
+        x = x + 0.05 * parseFloat(g);
+        y = y + 0.05 * parseFloat(b);
+        image(cat, x, y, 50, 50);
+        //for (let i; i < 10; i += 1) {
+        //circle(targetX, targetY, 100);
+        //circle(targetX, targetY, 50);
+        //}
+
+        Block(50, 0);
+        Block(170, random1);
+        Block(290, random2);
+        Block(410, random3);
+        Block(530, random4);
+        Block(650, random5);
+
+        collisionDetect();
+      }
+
+      function Block(targetX, targetY) {
+        fill(46, 139, 87);
+        stroke(47, 79, 79);
+        rect(targetX, targetY, blockw, blockh);
+        rect(targetX, targetY + 400, blockw, blockh);
+      }
+      function collisionDetect() {
+        let catright = x + 50; // 猫の右端
+        let catleft = x; // 猫の左端x
+        let cattop = y; // 猫の上端y
+        let catbottom = y + 50; // 猫の下端
+
+        let top = 0; // 上の上端
+        let right = blockw + 50; // 上1の右端
+        let left = 50; // 上1の左端
+        let bottom = blockh; // 上1の下端
+        let topb = 400; // 下の上端
+        let bottomb = 600; // 下1の下端
+
+        let right1 = blockw + 170;
+        let left1 = 170;
+        let bottom1 = blockh + random1;
+        let topb1 = random1 + 400;
+        //let rightb1 = blockw + 170;
+        //let leftb1 = 170;
+
+        let right2 = blockw + 290;
+        let left2 = 290;
+        let bottom2 = blockh + random2;
+        let topb2 = random2 + 400;
+
+        let right3 = blockw + 410;
+        let left3 = 410;
+        let bottom3 = blockh + random3;
+        let topb3 = random3 + 400;
+
+        let right4 = blockw + 530;
+        let left4 = 530;
+        let bottom4 = blockh + random4;
+        let topb4 = random4 + 400;
+
+        let right5 = blockw + 650;
+        let left5 = 650;
+        let bottom5 = blockh + random5;
+        let topb5 = random5 + 400;
+
+        if (
+          left < catright &&
+          top < catbottom &&
+          right > catleft &&
+          bottom > cattop
+        ) {
+          gameover();
+        } else if (
+          left1 < catright &&
+          top < catbottom &&
+          right1 > catleft &&
+          bottom1 > cattop
+        ) {
+          gameover();
+        } else if (
+          left2 < catright &&
+          top < catbottom &&
+          right2 > catleft &&
+          bottom2 > cattop
+        ) {
+          gameover();
+        } else if (
+          left3 < catright &&
+          top < catbottom &&
+          right3 > catleft &&
+          bottom3 > cattop
+        ) {
+          gameover();
+        } else if (
+          left4 < catright &&
+          top < catbottom &&
+          right4 > catleft &&
+          bottom4 > cattop
+        ) {
+          gameover();
+        } else if (
+          left5 < catright &&
+          top < catbottom &&
+          right5 > catleft &&
+          bottom5 > cattop
+        ) {
+          gameover();
+        } else if (
+          left < catright &&
+          topb < catbottom &&
+          right > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (
+          left1 < catright &&
+          topb1 < catbottom &&
+          right1 > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (
+          left2 < catright &&
+          topb2 < catbottom &&
+          right2 > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (
+          left3 < catright &&
+          topb3 < catbottom &&
+          right3 > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (
+          left4 < catright &&
+          topb4 < catbottom &&
+          right4 > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (
+          left5 < catright &&
+          topb5 < catbottom &&
+          right5 > catleft &&
+          bottomb > cattop
+        ) {
+          gameover();
+        } else if (catleft > right5) {
+          gameclear();
+        } else {
+          ledon([0x00, 0x00, 0x66]);
+        }
+      }
+
+      //function count{
+      //text(timer, 30, 30);
+      //fill(197,61,67);
+      //textSize(30);
+      //textAlign(CENTER, CENTER);
+      //if (frameCount % 60 == 0 && timer > 0) {
+      // if the frameCount is divisible by 60, then a second has passed. it will stop at 0
+      // timer--;
+      //}
+      //if (timer == 0) {
+      //gameover();
+      //}
+      //}
+
+      function gameover() {
+        background(0, 192);
+        fill(255);
+        textSize(64);
+        textAlign(CENTER, CENTER);
+        text("GAME OVER", width / 2, height / 2);
+        ledon([0x66, 0x00, 0x00]);
+      }
+      function gameclear() {
+        background(220, 20, 60, 192);
+        fill(255);
+        textSize(64);
+        textAlign(CENTER, CENTER);
+        text("GAME CLEAR", width / 2, height / 2);
+        texts = "ゲームクリア";
+        speak(texts);
+        noLoop();
+        ledon([0x66, 0x66, 0x00]);
+      }
+
+      function ledon(color) {
+        let ledlist = [];
+        for (let i = 0; i < LED_length; i++) {
+          ledlist.push(color);
+        }
+        leds.rgbs(ledlist);
+      }
+    </script>
+  </body>
+</html>
